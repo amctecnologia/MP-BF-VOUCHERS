@@ -43,6 +43,7 @@ router.get('/regioes', misc.listarRegioes);
 router.get('/lojas', misc.listarLojas);
 router.post('/lojas', authorize('ADMIN'), misc.criarLoja);
 router.put('/lojas/:id', authorize('ADMIN'), misc.atualizarLoja);
+router.delete('/lojas/:id', authorize('ADMIN'), misc.removerLoja);
 
 // ── Categorias ────────────────────────────────────────────────────────────────
 router.get('/categorias', misc.listarCategorias);

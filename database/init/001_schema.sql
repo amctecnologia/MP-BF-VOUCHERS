@@ -15,8 +15,6 @@ CREATE TABLE lojas (
   id          SERIAL PRIMARY KEY,
   nome        VARCHAR(150) NOT NULL,
   codigo_loja VARCHAR(20)  NOT NULL UNIQUE,
-  cidade      VARCHAR(100) NOT NULL,
-  estado      CHAR(2)      NOT NULL,
   regiao_id   INTEGER      NOT NULL REFERENCES regioes(id),
   ativa       BOOLEAN      NOT NULL DEFAULT TRUE
 );

@@ -31,6 +31,10 @@ export async function atualizarLoja(req: Request, res: Response) {
   try { res.json(await lojaRepo.atualizar(Number(req.params.id), req.body)); }
   catch (e: unknown) { res.status(400).json({ error: (e as Error).message }); }
 }
+export async function removerLoja(req: Request, res: Response) {
+  try { await lojaRepo.remover(Number(req.params.id)); res.json({ ok: true }); }
+  catch (e: unknown) { res.status(400).json({ error: (e as Error).message }); }
+}
 
 // ── Usuários ─────────────────────────────────────────────────────────────────
 export async function listarUsuarios(_req: Request, res: Response) {

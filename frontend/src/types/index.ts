@@ -12,7 +12,7 @@ export interface AuthUser {
 }
 
 export interface Regiao     { id: number; nome: string; }
-export interface Loja       { id: number; nome: string; codigo_loja: string; cidade: string; estado: string; regiao_id: number; regiao_nome: string; ativa: boolean; }
+export interface Loja       { id: number; nome: string; codigo_loja: string; regiao_id: number; regiao_nome: string; ativa: boolean; }
 export interface Categoria  { id: number; nome: string; codigo: string; descricao?: string; ativa: boolean; }
 export interface Campanha   { id: number; nome: string; descricao?: string; data_inicio: string; data_fim: string; status: StatusCampanha; total_categorias: number; }
 
