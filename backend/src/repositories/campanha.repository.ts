@@ -72,6 +72,17 @@ export async function criar(data: { nome: string; descricao?: string; data_inici
 }
 
 export async function atualizarStatus(id: number, status: string, usuarioId: number) {
+  if (status === 'ATIVA') {
+    const { rows: [check] } = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM campanha_categoria_lojas ccl
+      JOIN campanha_categorias cc ON ccl.campanha_categoria_id = cc.id
+      WHERE cc.campanha_id = $1 AND ccl.quantidade_distribuida > 0
+    `, [id]);
+    if (check.total === 0) {
+      throw new Error('A campanha precisa ter ao menos uma categoria com vouchers distribuídos para lojas.');
+    }
+  }
   const acoes: Record<string, string> = { ATIVA: 'ATIVOU', ENCERRADA: 'ENCERROU', CANCELADA: 'CANCELOU' };
   const { rows } = await pool.query(
     `UPDATE campanhas SET status=$2, atualizado_em=NOW() WHERE id=$1 RETURNING *`, [id, status]

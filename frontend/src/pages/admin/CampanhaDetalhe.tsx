@@ -84,6 +84,16 @@ export default function CampanhaDetalhe() {
   }
 
   async function mudarStatus(status: string) {
+    if (status === 'ATIVA') {
+      const temDistribuicao = (camp!.categorias || []).some(
+        (cc) => cc.regioes?.some((r) => r.lojas?.some((l) => l.quantidade_distribuida > 0))
+      );
+      if (!temDistribuicao) {
+        setError('A campanha precisa ter ao menos uma categoria com vouchers distribuídos para lojas antes de ser ativada.');
+        return;
+      }
+    }
+    setError('');
     await api.patch(`/campanhas/${camp!.id}/status`, { status });
     load();
   }
@@ -192,7 +202,7 @@ export default function CampanhaDetalhe() {
       </div>
 
       {/* Formulário de nova categoria */}
-      {camp.status === 'RASCUNHO' && !showCatForm && (
+      {['RASCUNHO', 'ATIVA'].includes(camp.status) && !showCatForm && (
         <button onClick={() => setShowCatForm(true)}
           className="flex items-center gap-2 border-2 border-dashed border-gray-300 text-gray-500 hover:border-accent hover:text-accent px-4 py-3 rounded-xl w-full justify-center transition-colors">
           <Plus size={18} /> Adicionar Categoria
