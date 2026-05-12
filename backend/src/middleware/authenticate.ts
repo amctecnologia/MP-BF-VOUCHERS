@@ -12,7 +12,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
     const payload = jwt.verify(
       header.slice(7),
       process.env.JWT_SECRET || 'secret'
-    ) as JwtPayload;
+    ) as unknown as JwtPayload;
     req.user = {
       id:          payload.sub,
       ad_username: payload.ad_username,
