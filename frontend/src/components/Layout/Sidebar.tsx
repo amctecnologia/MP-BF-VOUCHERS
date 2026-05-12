@@ -24,9 +24,7 @@ export default function Sidebar() {
   return (
     <aside className="w-60 bg-primary flex flex-col shrink-0">
       <div className="p-5 border-b border-primary-light">
-        <div className="bg-white rounded-lg p-1.5 inline-flex">
-        <img src="/logo-mp.png" alt="Minas Pneus" className="h-7" />
-      </div>
+        <img src="/logo-mp.png" alt="Minas Pneus" className="h-8" />
         <p className="text-gray-400 text-xs mt-1">Vouchers Bridgestone</p>
       </div>
 
