@@ -28,7 +28,25 @@ services:
       - traefik-public
     volumes:
       - uploads:/app/uploads
-    env_file: .env
+    environment:
+      DB_HOST: ${DB_HOST:-postgres}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      LDAP_URL: ${LDAP_URL}
+      LDAP_BASE_DN: ${LDAP_BASE_DN}
+      LDAP_BIND_DN: ${LDAP_BIND_DN}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD}
+      LDAP_SEARCH_BASE: ${LDAP_SEARCH_BASE}
+      LDAP_GROUP_ADMIN: ${LDAP_GROUP_ADMIN:-BF-VC-ADMIN}
+      LDAP_GROUP_VENDAS: ${LDAP_GROUP_VENDAS:-BF-VC-VENDAS}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      UPLOAD_MAX_SIZE_MB: ${UPLOAD_MAX_SIZE_MB:-10}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
     depends_on:
       postgres:
         condition: service_healthy
