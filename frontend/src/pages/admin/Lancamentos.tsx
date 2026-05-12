@@ -28,12 +28,27 @@ export default function Lancamentos() {
     load();
   }
 
+  async function exportarExcel() {
+    const p = new URLSearchParams(Object.fromEntries(Object.entries(filtros).filter(([, v]) => v)));
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/relatorios/lancamentos/export?${p}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lancamentos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Lançamentos</h1>
-        <a href={`/api/relatorios/lancamentos/export?${new URLSearchParams(Object.fromEntries(Object.entries(filtros).filter(([,v])=>v)))}`}
-          className="text-sm text-accent hover:underline">Exportar Excel</a>
+        <button onClick={exportarExcel} className="text-sm text-accent hover:underline">Exportar Excel</button>
       </div>
 
       <div className="bg-white rounded-xl p-4 mb-4 flex gap-4 shadow-sm border">
