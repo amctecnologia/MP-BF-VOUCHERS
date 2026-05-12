@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import api from '../../services/api';
 import { Campanha, CampanhaDetalhe, CampanhaCategoria, DistribuicaoRegiao, DistribuicaoLoja } from '../../types';
 
@@ -8,14 +8,12 @@ export default function Redistribuicao() {
   const [detalhe, setDetalhe] = useState<CampanhaDetalhe | null>(null);
   const [catId, setCatId] = useState('');
 
-  // Entre lojas
   const [lojaOrigem, setLojaOrigem] = useState('');
   const [lojaDestino, setLojaDestino] = useState('');
   const [qtdLoja, setQtdLoja] = useState('');
   const [erroLoja, setErroLoja] = useState('');
   const [okLoja, setOkLoja] = useState(false);
 
-  // Entre regioes
   const [regOrigem, setRegOrigem] = useState('');
   const [regDestino, setRegDestino] = useState('');
   const [qtdReg, setQtdReg] = useState('');
@@ -24,7 +22,7 @@ export default function Redistribuicao() {
 
   useEffect(() => {
     api.get('/campanhas').then((r) => {
-      setCampanhas((r.data as Campanha[]).filter((c) => ['ATIVA', 'ENCERRADA'].includes(c.status)));
+      setCampanhas((r.data as Campanha[]).filter((c) => c.status === 'ATIVA'));
     });
   }, []);
 
@@ -43,16 +41,19 @@ export default function Redistribuicao() {
 
   const cat: CampanhaCategoria | undefined = detalhe?.categorias.find((c) => String(c.id) === catId);
 
-  // Todas as lojas da categoria (achatadas)
   const todasLojas: DistribuicaoLoja[] = cat?.regioes.flatMap((r) => r.lojas) ?? [];
   const lojasComSaldo = todasLojas.filter((l) => l.saldo_disponivel > 0);
 
-  // Regioes com cota livre
   function cotaLivre(r: DistribuicaoRegiao) {
     const alocado = r.lojas.reduce((s, l) => s + l.quantidade_distribuida, 0);
     return r.quantidade_regional - alocado;
   }
+
   const regioesComLivre = cat?.regioes.filter((r) => cotaLivre(r) > 0) ?? [];
+
+  const maxReg = regOrigem && cat
+    ? cotaLivre(cat.regioes.find((x) => String(x.regiao_id) === regOrigem)!)
+    : null;
 
   async function transferirLojas() {
     setErroLoja(''); setOkLoja(false);
@@ -65,8 +66,7 @@ export default function Redistribuicao() {
         loja_destino_id: Number(lojaDestino),
         quantidade: Number(qtdLoja),
       });
-      setOkLoja(true);
-      setQtdLoja(''); setLojaOrigem(''); setLojaDestino('');
+      setOkLoja(true); setQtdLoja(''); setLojaOrigem(''); setLojaDestino('');
       reload();
     } catch (e: unknown) {
       setErroLoja((e as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'Erro ao redistribuir');
@@ -84,8 +84,7 @@ export default function Redistribuicao() {
         regiao_destino_id: Number(regDestino),
         quantidade: Number(qtdReg),
       });
-      setOkReg(true);
-      setQtdReg(''); setRegOrigem(''); setRegDestino('');
+      setOkReg(true); setQtdReg(''); setRegOrigem(''); setRegDestino('');
       reload();
     } catch (e: unknown) {
       setErroReg((e as { response?: { data?: { error?: string } } }).response?.data?.error ?? 'Erro ao redistribuir');
@@ -103,7 +102,7 @@ export default function Redistribuicao() {
           <select className="input text-sm w-full" value={campanhaId} onChange={(e) => setCampanhaId(e.target.value)}>
             <option value="">Selecione...</option>
             {campanhas.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome} ({c.status})</option>
+              <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
         </div>
@@ -142,26 +141,30 @@ export default function Redistribuicao() {
                 const regDist = reg.lojas.reduce((s, l) => s + l.quantidade_distribuida, 0);
                 const regSaldo = reg.lojas.reduce((s, l) => s + l.saldo_disponivel, 0);
                 const regUsado = regDist - regSaldo;
-                return [
-                  <tr key={`reg-${reg.regiao_id}`} className="bg-gray-50 font-medium">
-                    <td className="px-3 py-2 text-gray-800">{reg.regiao_nome}</td>
-                    <td className="px-3 py-2 text-right">{reg.quantidade_regional}</td>
-                    <td className="px-3 py-2 text-right">{regDist}</td>
-                    <td className="px-3 py-2 text-right text-orange-600">{regUsado}</td>
-                    <td className="px-3 py-2 text-right text-green-700 font-semibold">{regSaldo}</td>
-                    <td className="px-3 py-2 text-right text-blue-600 font-semibold">{livre}</td>
-                  </tr>,
-                  ...reg.lojas.map((loja) => (
-                    <tr key={`loja-${loja.loja_id}`} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 pl-8 text-gray-600">{loja.loja_nome} <span className="text-gray-400 text-xs">{loja.loja_codigo}</span></td>
-                      <td className="px-3 py-2 text-right text-gray-400">—</td>
-                      <td className="px-3 py-2 text-right">{loja.quantidade_distribuida}</td>
-                      <td className="px-3 py-2 text-right text-orange-600">{loja.quantidade_distribuida - loja.saldo_disponivel}</td>
-                      <td className="px-3 py-2 text-right text-green-700 font-semibold">{loja.saldo_disponivel}</td>
-                      <td className="px-3 py-2 text-right text-gray-400">—</td>
+                return (
+                  <Fragment key={reg.regiao_id}>
+                    <tr className="bg-gray-50 font-medium">
+                      <td className="px-3 py-2 text-gray-800">{reg.regiao_nome}</td>
+                      <td className="px-3 py-2 text-right">{reg.quantidade_regional}</td>
+                      <td className="px-3 py-2 text-right">{regDist}</td>
+                      <td className="px-3 py-2 text-right text-orange-600">{regUsado}</td>
+                      <td className="px-3 py-2 text-right text-green-700 font-semibold">{regSaldo}</td>
+                      <td className="px-3 py-2 text-right text-blue-600 font-semibold">{livre}</td>
                     </tr>
-                  )),
-                ];
+                    {reg.lojas.map((loja) => (
+                      <tr key={loja.loja_id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 pl-8 text-gray-600">
+                          {loja.loja_nome} <span className="text-gray-400 text-xs">{loja.loja_codigo}</span>
+                        </td>
+                        <td className="px-3 py-2 text-right text-gray-400">—</td>
+                        <td className="px-3 py-2 text-right">{loja.quantidade_distribuida}</td>
+                        <td className="px-3 py-2 text-right text-orange-600">{loja.quantidade_distribuida - loja.saldo_disponivel}</td>
+                        <td className="px-3 py-2 text-right text-green-700 font-semibold">{loja.saldo_disponivel}</td>
+                        <td className="px-3 py-2 text-right text-gray-400">—</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                );
               })}
             </tbody>
           </table>
@@ -210,13 +213,15 @@ export default function Redistribuicao() {
           {/* Entre Regioes */}
           <div className="bg-white rounded-xl shadow-sm border p-5">
             <h2 className="font-semibold mb-4">Transferir entre Regiões</h2>
-            <p className="text-xs text-gray-500 mb-3">Só é possível transferir a cota <strong>não alocada a lojas</strong> de uma região.</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Só é possível transferir a cota <strong>não alocada a lojas</strong> de uma região.
+            </p>
             {okReg && <p className="text-green-600 text-sm mb-3">Transferência realizada com sucesso.</p>}
             {erroReg && <p className="text-red-600 text-sm mb-3">{erroReg}</p>}
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Região Origem (com cota livre)</label>
-                <select className="input text-sm w-full" value={regOrigem} onChange={(e) => setRegOrigem(e.target.value)}>
+                <select className="input text-sm w-full" value={regOrigem} onChange={(e) => { setRegOrigem(e.target.value); setQtdReg(''); }}>
                   <option value="">Selecione...</option>
                   {regioesComLivre.map((r) => (
                     <option key={r.regiao_id} value={r.regiao_id}>{r.regiao_nome} — livre: {cotaLivre(r)}</option>
@@ -234,13 +239,9 @@ export default function Redistribuicao() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  Quantidade
-                  {regOrigem && (() => {
-                    const r = cat.regioes.find((x) => String(x.regiao_id) === regOrigem);
-                    return r ? <span className="text-gray-400 ml-1">(máx: {cotaLivre(r)})</span> : null;
-                  })()}
+                  Quantidade{maxReg !== null && <span className="text-gray-400 ml-1">(máx: {maxReg})</span>}
                 </label>
-                <input type="number" min={1} className="input text-sm w-full" value={qtdReg}
+                <input type="number" min={1} max={maxReg ?? undefined} className="input text-sm w-full" value={qtdReg}
                   onChange={(e) => setQtdReg(e.target.value)} placeholder="Ex: 10" />
               </div>
               <button onClick={transferirRegioes}
@@ -256,7 +257,7 @@ export default function Redistribuicao() {
         <p className="text-gray-400 text-center py-10">Selecione uma categoria para ver a distribuição.</p>
       )}
       {!campanhaId && (
-        <p className="text-gray-400 text-center py-10">Selecione uma campanha para começar.</p>
+        <p className="text-gray-400 text-center py-10">Selecione uma campanha ativa para começar.</p>
       )}
     </div>
   );
