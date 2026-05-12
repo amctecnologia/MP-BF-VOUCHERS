@@ -69,62 +69,72 @@ export async function authenticateUser(
           return resolve(null);
         }
 
-        let userEntry: ldap.SearchEntry | null = null;
-        res.on('searchEntry', (entry) => { userEntry = entry; });
+        // Captura os dados no evento searchEntry — antes de qualquer async
+        let userDn       = '';
+        let userSAM      = '';
+        let userDisplay  = '';
+        let userMail     = '';
+        let userMemberOf: string[] = [];
+
+        res.on('searchEntry', (entry) => {
+          userDn = entry.dn.toString();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const attr of (entry as any).attributes ?? []) {
+            const vals: string[] = Array.isArray(attr.values) ? attr.values : (attr.vals ?? []);
+            switch (attr.type) {
+              case 'sAMAccountName': userSAM      = vals[0] ?? ''; break;
+              case 'displayName':    userDisplay  = vals[0] ?? ''; break;
+              case 'mail':           userMail     = vals[0] ?? ''; break;
+              case 'memberOf':       userMemberOf = vals;           break;
+            }
+          }
+        });
+
         res.on('error', (err) => {
           console.error('[LDAP] Erro no resultado da busca:', err.message);
           client.destroy();
           resolve(null);
         });
+
         res.on('end', async () => {
-          if (!userEntry) {
+          client.destroy();
+
+          if (!userDn) {
             console.error('[LDAP] Usuário não encontrado:', username);
-            client.destroy();
             return resolve(null);
           }
 
-          const dn  = userEntry.dn;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const obj = (userEntry as any).object as Record<string, string | string[]>;
-          const get = (k: string): string[] => {
-            const v = obj[k];
-            if (!v) return [];
-            return Array.isArray(v) ? v : [v];
-          };
-
-          client.destroy();
-
-          // Tenta bind com DN completo primeiro, depois com UPN (user@domain)
           const upn = `${username}@${domain}`;
-          console.log('[LDAP] Tentando bind — DN:', dn, '| UPN:', upn);
+          console.log('[LDAP] Usuário encontrado — DN:', userDn, '| memberOf:', userMemberOf);
+          console.log('[LDAP] Tentando bind via DN...');
 
           const c1 = createClient();
           c1.on('error', () => {});
-          const okDn = await bindAsync(c1, dn, password);
+          const okDn = await bindAsync(c1, userDn, password);
           c1.destroy();
 
           if (!okDn) {
-            console.log('[LDAP] Bind por DN falhou, tentando UPN...');
+            console.log('[LDAP] Bind por DN falhou, tentando UPN:', upn);
             const c2 = createClient();
             c2.on('error', () => {});
             const okUpn = await bindAsync(c2, upn, password);
             c2.destroy();
 
             if (!okUpn) {
-              console.error('[LDAP] Autenticação falhou para:', username, '(DN e UPN recusados)');
+              console.error('[LDAP] Autenticação falhou (DN e UPN recusados) para:', username);
               return resolve(null);
             }
             console.log('[LDAP] Autenticado via UPN:', upn);
           } else {
-            console.log('[LDAP] Autenticado via DN:', dn);
+            console.log('[LDAP] Autenticado via DN');
           }
 
           resolve({
-            dn,
-            sAMAccountName: get('sAMAccountName')[0] || username,
-            displayName:    get('displayName')[0]    || username,
-            mail:           get('mail')[0]           || '',
-            memberOf:       get('memberOf'),
+            dn:             userDn,
+            sAMAccountName: userSAM     || username,
+            displayName:    userDisplay || username,
+            mail:           userMail,
+            memberOf:       userMemberOf,
           });
         });
       });
@@ -132,7 +142,7 @@ export async function authenticateUser(
   });
 }
 
-// Aceita tanto CN curto ("BF-VC-ADMIN") quanto DN completo ("CN=BF-VC-ADMIN,OU=GRUPOS,DC=...")
+// Aceita CN curto ("BF-VC-ADMIN") ou DN completo ("CN=BF-VC-ADMIN,OU=GRUPOS,DC=...")
 export function isInGroup(memberOf: string[], groupName: string): boolean {
   const lower = groupName.toLowerCase().trim();
   return memberOf.some((dn) => {
