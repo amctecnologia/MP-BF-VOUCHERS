@@ -1,13 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Tag, Store, Users, FileText, Megaphone, LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Tag, Store, Users, FileText, Megaphone, ArrowLeftRight, LucideIcon } from 'lucide-react';
 import PendenteBadge from './PendenteBadge';
 
 interface NavItem { to: string; label: string; icon: LucideIcon; badge?: boolean; }
 
 const adminLinks: NavItem[] = [
   { to: '/campanhas',   label: 'Campanhas',   icon: Megaphone },
-  { to: '/lancamentos', label: 'Lançamentos', icon: FileText, badge: true },
+  { to: '/lancamentos',    label: 'Lançamentos',    icon: FileText,      badge: true },
+  { to: '/redistribuicao', label: 'Redistribuição', icon: ArrowLeftRight },
   { to: '/categorias',  label: 'Categorias',  icon: Tag },
   { to: '/lojas',       label: 'Lojas',       icon: Store },
   { to: '/usuarios',    label: 'Usuários',    icon: Users },

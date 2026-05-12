@@ -1,6 +1,63 @@
 import { PoolClient } from 'pg';
 import { pool } from '../config/database';
 
+export async function redistribuirRegional(
+  campanhaCategoriaId: number,
+  regiaoOrigemId: number,
+  regiaoDestinoId: number,
+  quantidade: number,
+  usuarioId: number
+): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Calcula cota não alocada da origem (quantidade_regional - distribuído às lojas)
+    const { rows } = await client.query(`
+      SELECT ccr.quantidade_regional,
+             COALESCE(SUM(ccl.quantidade_distribuida), 0)::int AS alocado
+      FROM campanha_categoria_regioes ccr
+      LEFT JOIN lojas l ON l.regiao_id = ccr.regiao_id
+      LEFT JOIN campanha_categoria_lojas ccl
+             ON ccl.campanha_categoria_id = ccr.campanha_categoria_id
+            AND ccl.loja_id = l.id
+      WHERE ccr.campanha_categoria_id = $1
+        AND ccr.regiao_id = $2
+      GROUP BY ccr.quantidade_regional
+    `, [campanhaCategoriaId, regiaoOrigemId]);
+
+    if (!rows.length) throw new Error('Região de origem não encontrada nesta categoria');
+    const disponivel = rows[0].quantidade_regional - rows[0].alocado;
+    if (quantidade > disponivel) {
+      throw new Error(`Cota livre na região de origem é ${disponivel} voucher(s) (não alocados a lojas)`);
+    }
+
+    await client.query(`
+      UPDATE campanha_categoria_regioes
+      SET quantidade_regional = quantidade_regional - $3
+      WHERE campanha_categoria_id = $1 AND regiao_id = $2
+    `, [campanhaCategoriaId, regiaoOrigemId, quantidade]);
+
+    await client.query(`
+      UPDATE campanha_categoria_regioes
+      SET quantidade_regional = quantidade_regional + $3
+      WHERE campanha_categoria_id = $1 AND regiao_id = $2
+    `, [campanhaCategoriaId, regiaoDestinoId, quantidade]);
+
+    await client.query(`
+      INSERT INTO log_auditoria (entidade, entidade_id, acao, usuario_id, detalhe)
+      VALUES ('campanha_categoria_regioes', $1, 'REDISTRIBUIU', $2, $3::jsonb)
+    `, [campanhaCategoriaId, usuarioId, JSON.stringify({ regiaoOrigemId, regiaoDestinoId, quantidade })]);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 export async function debitarSaldo(
   client: PoolClient,
   campanhaCategoriaId: number,

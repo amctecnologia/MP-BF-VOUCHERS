@@ -78,6 +78,7 @@ router.patch('/lancamentos/:id/cancelar', authorize('ADMIN'), lancamento.cancela
 
 // ── Distribuição ──────────────────────────────────────────────────────────────
 router.post('/distribuicao/redistribuir', authorize('ADMIN'), distribuicao.redistribuirSaldo);
+router.post('/distribuicao/redistribuir-regional', authorize('ADMIN'), distribuicao.redistribuirSaldoRegional);
 
 // ── Relatórios ────────────────────────────────────────────────────────────────
 router.get('/relatorios/lancamentos/export', authorize('ADMIN'), relatorio.exportarLancamentos);

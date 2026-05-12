@@ -8,6 +8,7 @@ import Categorias from './pages/admin/Categorias';
 import Lojas from './pages/admin/Lojas';
 import Usuarios from './pages/admin/Usuarios';
 import Lancamentos from './pages/admin/Lancamentos';
+import Redistribuicao from './pages/admin/Redistribuicao';
 import DashboardVendas from './pages/vendas/DashboardVendas';
 import NovoLancamento from './pages/vendas/NovoLancamento';
 import Aguardando from './pages/Aguardando';
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="lojas" element={<Lojas />} />
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="lancamentos" element={<Lancamentos />} />
+            <Route path="redistribuicao" element={<Redistribuicao />} />
           </>
         ) : (
           <>
