@@ -18,22 +18,21 @@ export async function login(username: string, password: string) {
   }
 
   const perfil: PerfilUsuario = isAdmin ? 'ADMIN' : 'VENDAS';
+  // Calcula status no JS para evitar ambiguidade de tipo ENUM no PostgreSQL
+  const statusInicial = perfil === 'ADMIN' ? 'ATIVO' : 'PENDENTE_APROVACAO';
 
-  // Upsert do usuário local
   const { rows } = await pool.query<{
     id: number; loja_id: number | null; status: string;
   }>(`
     INSERT INTO users (ad_username, nome, email, perfil, status)
-    VALUES ($1, $2, $3, $4,
-      CASE WHEN $4 = 'ADMIN' THEN 'ATIVO' ELSE 'PENDENTE_APROVACAO' END
-    )
+    VALUES ($1, $2, $3, $4, $5)
     ON CONFLICT (ad_username) DO UPDATE
-      SET nome  = EXCLUDED.nome,
-          email = EXCLUDED.email,
-          perfil = EXCLUDED.perfil,
+      SET nome          = EXCLUDED.nome,
+          email         = EXCLUDED.email,
+          perfil        = EXCLUDED.perfil,
           atualizado_em = NOW()
     RETURNING id, loja_id, status
-  `, [ldapUser.sAMAccountName, ldapUser.displayName, ldapUser.mail, perfil]);
+  `, [ldapUser.sAMAccountName, ldapUser.displayName, ldapUser.mail, perfil, statusInicial]);
 
   const user = rows[0];
 
