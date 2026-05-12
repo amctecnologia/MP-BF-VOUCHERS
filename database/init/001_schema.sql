@@ -33,9 +33,6 @@ CREATE TABLE users (
   status      status_usuario NOT NULL DEFAULT 'PENDENTE_APROVACAO',
   criado_em   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT chk_vendas_loja CHECK (
-    perfil = 'ADMIN' OR loja_id IS NOT NULL
-  )
 );
 
 -- ── Categorias (catálogo global Bridgestone) ──────────────────────────────────
