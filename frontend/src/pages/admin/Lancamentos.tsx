@@ -77,14 +77,14 @@ export default function Lancamentos() {
                   {l.status === 'PENDENTE' && (
                     <>
                       <button onClick={() => { setModal(l); setAcao('validar'); }}
-                        className="p-1 hover:text-green-600 text-gray-400"><Check size={15} /></button>
+                        className="p-1 hover:text-green-600 text-gray-400" title="Validar lançamento"><Check size={15} /></button>
                       <button onClick={() => { setModal(l); setAcao('cancelar'); }}
-                        className="p-1 hover:text-red-600 text-gray-400"><X size={15} /></button>
+                        className="p-1 hover:text-red-600 text-gray-400" title="Cancelar lançamento"><X size={15} /></button>
                     </>
                   )}
                   {l.status === 'VALIDADO' && (
                     <button onClick={() => { setModal(l); setAcao('cancelar'); }}
-                      className="p-1 hover:text-red-600 text-gray-400"><X size={15} /></button>
+                      className="p-1 hover:text-red-600 text-gray-400" title="Cancelar lançamento"><X size={15} /></button>
                   )}
                 </td>
               </tr>
