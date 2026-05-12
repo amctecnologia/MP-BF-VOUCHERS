@@ -1,17 +1,19 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { LayoutDashboard, Tag, Store, Users, FileText, Megaphone } from 'lucide-react';
+import { LayoutDashboard, Tag, Store, Users, FileText, Megaphone, LucideIcon } from 'lucide-react';
 import PendenteBadge from './PendenteBadge';
 
-const adminLinks = [
-  { to: '/campanhas',  label: 'Campanhas',   icon: Megaphone },
-  { to: '/lancamentos',label: 'Lançamentos', icon: FileText, badge: true },
-  { to: '/categorias', label: 'Categorias',  icon: Tag },
-  { to: '/lojas',      label: 'Lojas',       icon: Store },
-  { to: '/usuarios',   label: 'Usuários',    icon: Users },
+interface NavItem { to: string; label: string; icon: LucideIcon; badge?: boolean; }
+
+const adminLinks: NavItem[] = [
+  { to: '/campanhas',   label: 'Campanhas',   icon: Megaphone },
+  { to: '/lancamentos', label: 'Lançamentos', icon: FileText, badge: true },
+  { to: '/categorias',  label: 'Categorias',  icon: Tag },
+  { to: '/lojas',       label: 'Lojas',       icon: Store },
+  { to: '/usuarios',    label: 'Usuários',    icon: Users },
 ];
 
-const vendasLinks = [
+const vendasLinks: NavItem[] = [
   { to: '/vendas', label: 'Meu Painel', icon: LayoutDashboard },
 ];
 

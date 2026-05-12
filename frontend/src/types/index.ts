@@ -49,5 +49,5 @@ export interface Lancamento {
 
 export interface Usuario {
   id: number; ad_username: string; nome: string; email?: string;
-  perfil: PerfilUsuario; status: string; loja_nome?: string; loja_id?: number;
+  perfil: PerfilUsuario; status: string; loja_nome?: string; loja_id?: number; criado_em?: string;
 }
