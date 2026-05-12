@@ -32,23 +32,42 @@ export async function authenticateUser(
 
   return new Promise((resolve) => {
     const client = createClient();
-    client.on('error', () => resolve(null));
+    client.on('error', (err) => {
+      console.error('[LDAP] Erro de conexão:', err.message);
+      resolve(null);
+    });
 
     client.bind(bindDn, bindPass, (bindErr) => {
-      if (bindErr) { client.destroy(); return resolve(null); }
+      if (bindErr) {
+        console.error('[LDAP] Erro no bind do service account:', bindErr.message);
+        client.destroy();
+        return resolve(null);
+      }
 
       client.search(searchBase, {
         filter: `(sAMAccountName=${escapeFilter(username)})`,
         scope: 'sub',
         attributes: ['dn', 'sAMAccountName', 'displayName', 'mail', 'memberOf'],
       }, (searchErr, res) => {
-        if (searchErr) { client.destroy(); return resolve(null); }
+        if (searchErr) {
+          console.error('[LDAP] Erro na busca:', searchErr.message);
+          client.destroy();
+          return resolve(null);
+        }
 
         let userEntry: ldap.SearchEntry | null = null;
         res.on('searchEntry', (entry) => { userEntry = entry; });
-        res.on('error', () => { client.destroy(); resolve(null); });
+        res.on('error', (err) => {
+          console.error('[LDAP] Erro no resultado da busca:', err.message);
+          client.destroy();
+          resolve(null);
+        });
         res.on('end', () => {
-          if (!userEntry) { client.destroy(); return resolve(null); }
+          if (!userEntry) {
+            console.error('[LDAP] Usuário não encontrado:', username);
+            client.destroy();
+            return resolve(null);
+          }
 
           const dn  = userEntry.dn;
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,11 +79,18 @@ export async function authenticateUser(
           };
 
           const userClient = createClient();
-          userClient.on('error', () => resolve(null));
+          userClient.on('error', (err) => {
+            console.error('[LDAP] Erro de conexão (user bind):', err.message);
+            resolve(null);
+          });
           userClient.bind(dn, password, (authErr) => {
             userClient.destroy();
             client.destroy();
-            if (authErr) return resolve(null);
+            if (authErr) {
+              console.error('[LDAP] Senha inválida para:', username);
+              return resolve(null);
+            }
+            console.log('[LDAP] Autenticado com sucesso:', username, '| memberOf:', get('memberOf'));
             resolve({
               dn,
               sAMAccountName: get('sAMAccountName')[0] || username,
@@ -79,8 +105,12 @@ export async function authenticateUser(
   });
 }
 
+// Aceita tanto CN curto ("BF-VC-ADMIN") quanto DN completo ("CN=BF-VC-ADMIN,OU=GRUPOS,DC=...")
 export function isInGroup(memberOf: string[], groupName: string): boolean {
-  return memberOf.some((dn) =>
-    dn.toLowerCase().includes(`cn=${groupName.toLowerCase()},`)
-  );
+  const lower = groupName.toLowerCase().trim();
+  return memberOf.some((dn) => {
+    const dnLower = dn.toLowerCase().trim();
+    if (dnLower === lower) return true;               // DN completo exato
+    return dnLower.includes(`cn=${lower},`);          // Nome curto
+  });
 }
