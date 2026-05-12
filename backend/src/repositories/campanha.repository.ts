@@ -29,13 +29,13 @@ export async function buscarPorId(id: number) {
                'valor_desconto', cc.valor_desconto,
                'quantidade_total', cc.quantidade_total,
                'status', cc.status,
-               'regioes', (
+               'regioes', COALESCE((
                  SELECT json_agg(json_build_object(
                    'id', ccr.id,
                    'regiao_id', ccr.regiao_id,
                    'regiao_nome', r.nome,
                    'quantidade_regional', ccr.quantidade_regional,
-                   'lojas', (
+                   'lojas', COALESCE((
                      SELECT json_agg(json_build_object(
                        'id', ccl.id,
                        'loja_id', ccl.loja_id,
@@ -46,11 +46,11 @@ export async function buscarPorId(id: number) {
                      )) FROM campanha_categoria_lojas ccl
                      JOIN lojas l ON ccl.loja_id = l.id
                      WHERE ccl.campanha_categoria_id = cc.id AND l.regiao_id = ccr.regiao_id
-                   )
+                   ), '[]'::json)
                  )) FROM campanha_categoria_regioes ccr
                  JOIN regioes r ON ccr.regiao_id = r.id
                  WHERE ccr.campanha_categoria_id = cc.id
-               )
+               ), '[]'::json)
              )
            ) FILTER (WHERE cc.id IS NOT NULL) AS categorias
     FROM campanhas c

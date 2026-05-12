@@ -39,20 +39,20 @@ export default function Redistribuicao() {
     api.get(`/campanhas/${campanhaId}`).then((r) => setDetalhe(r.data));
   }
 
-  const cat: CampanhaCategoria | undefined = detalhe?.categorias.find((c) => String(c.id) === catId);
+  const cat: CampanhaCategoria | undefined = detalhe?.categorias?.find((c) => String(c.id) === catId);
 
-  const todasLojas: DistribuicaoLoja[] = cat?.regioes.flatMap((r) => r.lojas) ?? [];
+  const todasLojas: DistribuicaoLoja[] = cat?.regioes?.flatMap((r) => r.lojas ?? []) ?? [];
   const lojasComSaldo = todasLojas.filter((l) => l.saldo_disponivel > 0);
 
   function cotaLivre(r: DistribuicaoRegiao) {
-    const alocado = r.lojas.reduce((s, l) => s + l.quantidade_distribuida, 0);
+    const alocado = (r.lojas ?? []).reduce((s, l) => s + l.quantidade_distribuida, 0);
     return r.quantidade_regional - alocado;
   }
 
-  const regioesComLivre = cat?.regioes.filter((r) => cotaLivre(r) > 0) ?? [];
+  const regioesComLivre = cat?.regioes?.filter((r) => cotaLivre(r) > 0) ?? [];
 
   const maxReg = regOrigem && cat
-    ? cotaLivre(cat.regioes.find((x) => String(x.regiao_id) === regOrigem)!)
+    ? cotaLivre(cat.regioes?.find((x) => String(x.regiao_id) === regOrigem) ?? { lojas: [], quantidade_regional: 0, regiao_id: 0, regiao_nome: '' })
     : null;
 
   async function transferirLojas() {
@@ -136,10 +136,11 @@ export default function Redistribuicao() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {cat.regioes.map((reg) => {
+              {(cat.regioes ?? []).map((reg) => {
+                const lojas = reg.lojas ?? [];
                 const livre = cotaLivre(reg);
-                const regDist = reg.lojas.reduce((s, l) => s + l.quantidade_distribuida, 0);
-                const regSaldo = reg.lojas.reduce((s, l) => s + l.saldo_disponivel, 0);
+                const regDist = lojas.reduce((s, l) => s + l.quantidade_distribuida, 0);
+                const regSaldo = lojas.reduce((s, l) => s + l.saldo_disponivel, 0);
                 const regUsado = regDist - regSaldo;
                 return (
                   <Fragment key={reg.regiao_id}>
@@ -151,7 +152,7 @@ export default function Redistribuicao() {
                       <td className="px-3 py-2 text-right text-green-700 font-semibold">{regSaldo}</td>
                       <td className="px-3 py-2 text-right text-blue-600 font-semibold">{livre}</td>
                     </tr>
-                    {reg.lojas.map((loja) => (
+                    {lojas.map((loja) => (
                       <tr key={loja.loja_id} className="hover:bg-gray-50">
                         <td className="px-3 py-2 pl-8 text-gray-600">
                           {loja.loja_nome} <span className="text-gray-400 text-xs">{loja.loja_codigo}</span>
