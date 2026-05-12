@@ -1,0 +1,75 @@
+services:
+  frontend:
+    build: ./frontend
+    networks:
+      - internal
+      - traefik-public
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.mp-bf-vouchers-frontend.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.mp-bf-vouchers-frontend.entrypoints=websecure
+      - traefik.http.routers.mp-bf-vouchers-frontend.tls.certresolver=letsencrypt
+      - traefik.http.services.mp-bf-vouchers-frontend.loadbalancer.server.port=80
+
+  backend:
+    build: ./backend
+    networks:
+      - internal
+      - traefik-public
+    volumes:
+      - uploads:/app/uploads
+    env_file: .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=traefik-public
+      - traefik.http.routers.mp-bf-vouchers-backend.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`)
+      - traefik.http.routers.mp-bf-vouchers-backend.entrypoints=websecure
+      - traefik.http.routers.mp-bf-vouchers-backend.tls.certresolver=letsencrypt
+      - traefik.http.services.mp-bf-vouchers-backend.loadbalancer.server.port=3000
+
+  postgres:
+    image: postgres:16-alpine
+    networks:
+      - internal
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  internal:
+    driver: bridge
+  traefik-public:
+    external: true

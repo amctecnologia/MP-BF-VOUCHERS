@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-gray-50 text-gray-900; }
+
+.badge-ATIVA     { @apply bg-green-100 text-green-800; }
+.badge-RASCUNHO  { @apply bg-gray-100 text-gray-600; }
+.badge-ENCERRADA { @apply bg-orange-100 text-orange-700; }
+.badge-CANCELADA { @apply bg-red-100 text-red-700; }
+.badge-PENDENTE  { @apply bg-yellow-100 text-yellow-800; }
+.badge-VALIDADO  { @apply bg-green-100 text-green-800; }
+.badge-CANCELADO { @apply bg-red-100 text-red-700; }
+
+@layer components {
+  .input {
+    @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+}
