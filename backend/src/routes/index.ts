@@ -35,6 +35,11 @@ router.get('/health', (_req: Request, res: Response) => res.json({ ok: true }));
 // ── Auth ─────────────────────────────────────────────────────────────────────
 router.post('/auth/login', loginHandler);
 
+// ── Uploads — público (browser abre link direto sem header Authorization) ─────
+router.get('/uploads/:filename', (req: Request, res: Response) => {
+  res.sendFile(path.join(process.cwd(), 'uploads', req.params.filename));
+});
+
 // ── Acesso autenticado ────────────────────────────────────────────────────────
 router.use(authenticate);
 
@@ -77,10 +82,5 @@ router.post('/distribuicao/redistribuir', authorize('ADMIN'), distribuicao.redis
 // ── Relatórios ────────────────────────────────────────────────────────────────
 router.get('/relatorios/lancamentos/export', authorize('ADMIN'), relatorio.exportarLancamentos);
 router.get('/relatorios/saldo-por-categoria', authorize('ADMIN'), relatorio.saldoPorCategoria);
-
-// ── Uploads (servir arquivos) ─────────────────────────────────────────────────
-router.get('/uploads/:filename', (req: Request, res: Response) => {
-  res.sendFile(path.join(process.cwd(), 'uploads', req.params.filename));
-});
 
 export default router;
