@@ -22,6 +22,19 @@ function createClient(): ldap.Client {
   });
 }
 
+function baseDnToDomain(baseDn: string): string {
+  return baseDn.split(',')
+    .filter((p) => p.toLowerCase().startsWith('dc='))
+    .map((p) => p.slice(3))
+    .join('.');
+}
+
+function bindAsync(client: ldap.Client, dn: string, password: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    client.bind(dn, password, (err) => resolve(!err));
+  });
+}
+
 export async function authenticateUser(
   username: string,
   password: string
@@ -29,6 +42,7 @@ export async function authenticateUser(
   const searchBase = process.env.LDAP_SEARCH_BASE || '';
   const bindDn     = process.env.LDAP_BIND_DN      || '';
   const bindPass   = process.env.LDAP_BIND_PASSWORD || '';
+  const domain     = baseDnToDomain(process.env.LDAP_BASE_DN || '');
 
   return new Promise((resolve) => {
     const client = createClient();
@@ -62,7 +76,7 @@ export async function authenticateUser(
           client.destroy();
           resolve(null);
         });
-        res.on('end', () => {
+        res.on('end', async () => {
           if (!userEntry) {
             console.error('[LDAP] Usuário não encontrado:', username);
             client.destroy();
@@ -78,26 +92,39 @@ export async function authenticateUser(
             return Array.isArray(v) ? v : [v];
           };
 
-          const userClient = createClient();
-          userClient.on('error', (err) => {
-            console.error('[LDAP] Erro de conexão (user bind):', err.message);
-            resolve(null);
-          });
-          userClient.bind(dn, password, (authErr) => {
-            userClient.destroy();
-            client.destroy();
-            if (authErr) {
-              console.error('[LDAP] Senha inválida para:', username);
+          client.destroy();
+
+          // Tenta bind com DN completo primeiro, depois com UPN (user@domain)
+          const upn = `${username}@${domain}`;
+          console.log('[LDAP] Tentando bind — DN:', dn, '| UPN:', upn);
+
+          const c1 = createClient();
+          c1.on('error', () => {});
+          const okDn = await bindAsync(c1, dn, password);
+          c1.destroy();
+
+          if (!okDn) {
+            console.log('[LDAP] Bind por DN falhou, tentando UPN...');
+            const c2 = createClient();
+            c2.on('error', () => {});
+            const okUpn = await bindAsync(c2, upn, password);
+            c2.destroy();
+
+            if (!okUpn) {
+              console.error('[LDAP] Autenticação falhou para:', username, '(DN e UPN recusados)');
               return resolve(null);
             }
-            console.log('[LDAP] Autenticado com sucesso:', username, '| memberOf:', get('memberOf'));
-            resolve({
-              dn,
-              sAMAccountName: get('sAMAccountName')[0] || username,
-              displayName:    get('displayName')[0]    || username,
-              mail:           get('mail')[0]           || '',
-              memberOf:       get('memberOf'),
-            });
+            console.log('[LDAP] Autenticado via UPN:', upn);
+          } else {
+            console.log('[LDAP] Autenticado via DN:', dn);
+          }
+
+          resolve({
+            dn,
+            sAMAccountName: get('sAMAccountName')[0] || username,
+            displayName:    get('displayName')[0]    || username,
+            mail:           get('mail')[0]           || '',
+            memberOf:       get('memberOf'),
           });
         });
       });
@@ -110,7 +137,7 @@ export function isInGroup(memberOf: string[], groupName: string): boolean {
   const lower = groupName.toLowerCase().trim();
   return memberOf.some((dn) => {
     const dnLower = dn.toLowerCase().trim();
-    if (dnLower === lower) return true;               // DN completo exato
-    return dnLower.includes(`cn=${lower},`);          // Nome curto
+    if (dnLower === lower) return true;
+    return dnLower.includes(`cn=${lower},`);
   });
 }
